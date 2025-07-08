@@ -1,0 +1,10 @@
+---
+alwaysApply: true
+---
+Usa siempre context7 para buscar documentacion
+Usa siempre secuencial thinking para dividir las tareas en partes 
+Usa taskmaster-ai siempre.
+Usa codebase retrieval antes de ejecutar cualquier desarollo o responder algo
+No inventes,alucines,o creas algo sin revisar y estar seguro.
+Siempre revisa los esquemas , modelos de la base de datos
+Guarda en memoria siempre lo importante para que recuerdes las cosas.
