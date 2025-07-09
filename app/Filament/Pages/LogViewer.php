@@ -111,7 +111,25 @@ class LogViewer extends Page implements HasForms
             $filepath = "{$logsPath}/{$filename}";
             
             if (File::exists($filepath)) {
-                $content = File::get($filepath);
+                // Verificar tamaño del archivo
+                $fileSize = File::size($filepath);
+                
+                if ($fileSize > 10 * 1024 * 1024) { // 10MB límite
+                    // Para archivos grandes, leer solo las últimas líneas
+                    $content = $this->readLogFileTail($filepath, 1000); // Últimas 1000 líneas
+                    
+                    // Agregar notificación de que es un archivo grande
+                    \Filament\Notifications\Notification::make()
+                        ->title('Archivo de log grande detectado')
+                        ->body("El archivo {$filename} es grande (" . round($fileSize / 1024 / 1024, 2) . "MB). Mostrando solo las últimas 1000 líneas.")
+                        ->warning()
+                        ->send();
+                        
+                } else {
+                    // Para archivos pequeños, leer todo el contenido
+                    $content = File::get($filepath);
+                }
+                
                 $this->parseLogContent($content, $channel);
             }
         }
@@ -123,6 +141,43 @@ class LogViewer extends Page implements HasForms
         
         // Aplicar filtros adicionales
         $this->applyFilters();
+    }
+    
+    private function readLogFileTail(string $filepath, int $lines = 1000): string
+    {
+        $handle = fopen($filepath, 'r');
+        if (!$handle) {
+            return '';
+        }
+        
+        $linecounter = $lines;
+        $pos = -2;
+        $beginning = false;
+        $text = [];
+        
+        while ($linecounter > 0) {
+            $t = ' ';
+            while ($t != "\n") {
+                if(fseek($handle, $pos, SEEK_END) == -1) {
+                    $beginning = true;
+                    break;
+                }
+                $t = fgetc($handle);
+                $pos --;
+            }
+            
+            $linecounter --;
+            if($beginning) {
+                rewind($handle);
+            }
+            
+            $text[$lines - $linecounter - 1] = fgets($handle);
+            
+            if($beginning) break;
+        }
+        
+        fclose($handle);
+        return implode('', array_reverse($text));
     }
     
     private function parseLogContent(string $content, string $channel): void
@@ -207,6 +262,106 @@ class LogViewer extends Page implements HasForms
         
         abort(404, 'Archivo de log no encontrado');
     }
+
+    public function clearLogs(): void
+    {
+        try {
+            $date = $this->selectedDate ? Carbon::parse($this->selectedDate) : now();
+            $clearedFiles = [];
+            
+            if ($this->selectedChannel === 'all') {
+                // Limpiar todos los logs del día
+                $channels = ['gps', 'transmissions', 'system', 'errors'];
+                foreach ($channels as $channel) {
+                    $filename = "{$channel}-{$date->format('Y-m-d')}.log";
+                    $filepath = storage_path("logs/gps/{$filename}");
+                    if (File::exists($filepath)) {
+                        File::put($filepath, '');
+                        $clearedFiles[] = $filename;
+                    }
+                }
+            } else {
+                // Limpiar log específico
+                $filename = "{$this->selectedChannel}-{$date->format('Y-m-d')}.log";
+                $filepath = storage_path("logs/gps/{$filename}");
+                if (File::exists($filepath)) {
+                    File::put($filepath, '');
+                    $clearedFiles[] = $filename;
+                }
+            }
+            
+            if (!empty($clearedFiles)) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Logs limpiados exitosamente')
+                    ->body('Se limpiaron los siguientes archivos: ' . implode(', ', $clearedFiles))
+                    ->success()
+                    ->send();
+            } else {
+                \Filament\Notifications\Notification::make()
+                    ->title('Sin archivos para limpiar')
+                    ->body('No se encontraron archivos de log para la fecha seleccionada')
+                    ->warning()
+                    ->send();
+            }
+            
+            // Recargar logs después de limpiar
+            $this->loadLogs();
+            
+        } catch (\Exception $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Error al limpiar logs')
+                ->body('Error: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    public function clearAllLogs(): void
+    {
+        try {
+            $clearedFiles = [];
+            $logsPath = storage_path('logs/gps');
+            
+            if (File::exists($logsPath)) {
+                $files = File::glob($logsPath . '/*.log');
+                foreach ($files as $file) {
+                    File::put($file, '');
+                    $clearedFiles[] = basename($file);
+                }
+            }
+            
+            // También limpiar el log principal de Laravel
+            $laravelLog = storage_path('logs/laravel.log');
+            if (File::exists($laravelLog)) {
+                File::put($laravelLog, '');
+                $clearedFiles[] = 'laravel.log';
+            }
+            
+            if (!empty($clearedFiles)) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Todos los logs limpiados')
+                    ->body('Se limpiaron ' . count($clearedFiles) . ' archivos de log')
+                    ->success()
+                    ->send();
+            } else {
+                \Filament\Notifications\Notification::make()
+                    ->title('Sin archivos para limpiar')
+                    ->body('No se encontraron archivos de log')
+                    ->warning()
+                    ->send();
+            }
+            
+            // Recargar logs después de limpiar
+            $this->loadLogs();
+            
+        } catch (\Exception $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Error al limpiar logs')
+                ->body('Error: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
     
     protected function getActions(): array
     {
@@ -220,6 +375,30 @@ class LogViewer extends Page implements HasForms
                 ->label('Descargar')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->action('downloadLogs'),
+                
+            \Filament\Actions\Action::make('clear')
+                ->label('Limpiar Logs Actuales')
+                ->icon('heroicon-o-trash')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalHeading('Confirmar limpieza de logs')
+                ->modalDescription(function () {
+                    $date = $this->selectedDate ? Carbon::parse($this->selectedDate)->format('d/m/Y') : now()->format('d/m/Y');
+                    $channel = $this->selectedChannel === 'all' ? 'todos los canales' : $this->selectedChannel;
+                    return "¿Estás seguro de que quieres limpiar los logs de {$channel} para el día {$date}? Esta acción no se puede deshacer.";
+                })
+                ->modalSubmitActionLabel('Sí, limpiar logs')
+                ->action('clearLogs'),
+                
+            \Filament\Actions\Action::make('clearAll')
+                ->label('Limpiar Todos los Logs')
+                ->icon('heroicon-o-fire')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('⚠️ Confirmar limpieza completa')
+                ->modalDescription('¿Estás seguro de que quieres limpiar TODOS los archivos de log del sistema? Esta acción eliminará todos los logs GPS y de Laravel, y no se puede deshacer.')
+                ->modalSubmitActionLabel('Sí, limpiar TODOS los logs')
+                ->action('clearAllLogs'),
         ];
     }
 } 
