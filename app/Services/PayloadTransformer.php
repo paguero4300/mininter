@@ -165,18 +165,23 @@ class PayloadTransformer
      * Formatear fecha y hora según especificación
      *
      * @param mixed $dateTime
-     * @return string Formato: dd/MM/yyyy HH:mm:ss
+     * @return string Formato: dd/MM/yyyy HH:mm:ss en GMT-5 (America/Lima)
      */
     private function formatDateTime($dateTime): string
     {
         try {
+            $targetTimezone = config('services.data_transformation.timezone', 'America/Lima');
+            
             if (is_numeric($dateTime)) {
-                // Timestamp Unix
-                $carbon = Carbon::createFromTimestamp((int) $dateTime);
+                // Timestamp Unix - crear desde timestamp en UTC
+                $carbon = Carbon::createFromTimestamp((int) $dateTime, 'UTC');
             } else {
-                // String de fecha
-                $carbon = Carbon::parse($dateTime);
+                // String de fecha - parsear como UTC (como viene de GPServer)
+                $carbon = Carbon::parse($dateTime, 'UTC');
             }
+
+            // Convertir de UTC a la zona horaria de destino (America/Lima = GMT-5)
+            $carbon->setTimezone($targetTimezone);
 
             return $carbon->format('d/m/Y H:i:s');
 
@@ -186,8 +191,9 @@ class PayloadTransformer
                 'error' => $e->getMessage()
             ]);
 
-            // Retornar fecha actual como fallback
-            return Carbon::now()->format('d/m/Y H:i:s');
+            // Retornar fecha actual como fallback en la zona horaria correcta
+            $targetTimezone = config('services.data_transformation.timezone', 'America/Lima');
+            return Carbon::now($targetTimezone)->format('d/m/Y H:i:s');
         }
     }
 
