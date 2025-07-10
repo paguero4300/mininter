@@ -397,7 +397,7 @@ class PayloadTransformerTest extends TestCase
     }
 
         public function test_formats_ignition_field_correctly()
-    {
+        {
         // Arrange
         $gpsObjects = [
             [
@@ -488,5 +488,66 @@ class PayloadTransformerTest extends TestCase
         $this->assertArrayHasKey('imei', $sample);
         $this->assertArrayHasKey('fechaHora', $sample);
         $this->assertArrayHasKey('idMunicipalidad', $sample);
+    }
+
+    public function test_codigo_comisaria_priority_custom_fields()
+    {
+        $municipality = Municipality::factory()->create([
+            'tipo' => 'POLICIAL',
+            'codigo_comisaria' => '999999',
+        ]);
+
+        $gpsObject = [
+            'imei' => '123456789012345',
+            'lat' => '-12.0',
+            'lng' => '-77.0',
+            'dt_server' => '2025-07-10 12:00:00',
+            'custom_fields' => [
+                ['name' => 'codigoComisaria', 'value' => '150101']
+            ]
+        ];
+
+        $transformer = new \App\Services\PayloadTransformer();
+        $result = $transformer->transformForPolicial([$gpsObject], $municipality);
+        $this->assertEquals('150101', $result[0]['codigoComisaria']);
+    }
+
+    public function test_codigo_comisaria_priority_direct_field()
+    {
+        $municipality = Municipality::factory()->create([
+            'tipo' => 'POLICIAL',
+            'codigo_comisaria' => '888888',
+        ]);
+
+        $gpsObject = [
+            'imei' => '123456789012345',
+            'lat' => '-12.0',
+            'lng' => '-77.0',
+            'dt_server' => '2025-07-10 12:00:00',
+            'codigoComisaria' => '150102'
+        ];
+
+        $transformer = new \App\Services\PayloadTransformer();
+        $result = $transformer->transformForPolicial([$gpsObject], $municipality);
+        $this->assertEquals('150102', $result[0]['codigoComisaria']);
+    }
+
+    public function test_codigo_comisaria_fallback_database()
+    {
+        $municipality = Municipality::factory()->create([
+            'tipo' => 'POLICIAL',
+            'codigo_comisaria' => '777777',
+        ]);
+
+        $gpsObject = [
+            'imei' => '123456789012345',
+            'lat' => '-12.0',
+            'lng' => '-77.0',
+            'dt_server' => '2025-07-10 12:00:00',
+        ];
+
+        $transformer = new \App\Services\PayloadTransformer();
+        $result = $transformer->transformForPolicial([$gpsObject], $municipality);
+        $this->assertEquals('777777', $result[0]['codigoComisaria']);
     }
 }

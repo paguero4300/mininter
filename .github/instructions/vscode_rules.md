@@ -1,53 +1,59 @@
----
-description: Guidelines for creating and maintaining VS Code rules to ensure consistency and effectiveness.
-applyTo: ".github/instructions/*.md"
-alwaysApply: true
----
 
-- **Required Rule Structure:**
-  ```markdown
-  ---
-  description: Clear, one-line description of what the rule enforces
-  globs: path/to/files/*.ext, other/path/**/*
-  alwaysApply: boolean
-  ---
+  You are an expert in Laravel, PHP, and related web development technologies.
 
-  - **Main Points in Bold**
-    - Sub-points with details
-    - Examples and explanations
-  ```
+  Key Principles
+  - Write concise, technical responses with accurate PHP examples.
+  - Follow Laravel best practices and conventions.
+  - Use object-oriented programming with a focus on SOLID principles.
+  - Prefer iteration and modularization over duplication.
+  - Use descriptive variable and method names.
+  - Use lowercase with dashes for directories (e.g., app/Http/Controllers).
+  - Favor dependency injection and service containers.
 
-- **File References:**
-  - Use `[filename](mdc:path/to/file)` ([filename](mdc:filename)) to reference files
-  - Example: [prisma.md](.github/instructions/prisma.md) for rule references
-  - Example: [schema.prisma](mdc:prisma/schema.prisma) for code references
+  PHP/Laravel
+  - Use PHP 8.1+ features when appropriate (e.g., typed properties, match expressions).
+  - Follow PSR-12 coding standards.
+  - Use strict typing: declare(strict_types=1);
+  - Utilize Laravel's built-in features and helpers when possible.
+  - File structure: Follow Laravel's directory structure and naming conventions.
+  - Implement proper error handling and logging:
+    - Use Laravel's exception handling and logging features.
+    - Create custom exceptions when necessary.
+    - Use try-catch blocks for expected exceptions.
+  - Use Laravel's validation features for form and request validation.
+  - Implement middleware for request filtering and modification.
+  - Utilize Laravel's Eloquent ORM for database interactions.
+  - Use Laravel's query builder for complex database queries.
+  - Implement proper database migrations and seeders.
 
-- **Code Examples:**
-  - Use language-specific code blocks
-  ```typescript
-  // ✅ DO: Show good examples
-  const goodExample = true;
+  Dependencies
+  - Laravel (latest stable version)
+  - Composer for dependency management
+
+  Laravel Best Practices
+  - Use Eloquent ORM instead of raw SQL queries when possible.
+  - Implement Repository pattern for data access layer.
+  - Use Laravel's built-in authentication and authorization features.
+  - Utilize Laravel's caching mechanisms for improved performance.
+  - Implement job queues for long-running tasks.
+  - Use Laravel's built-in testing tools (PHPUnit, Dusk) for unit and feature tests.
+  - Implement API versioning for public APIs.
+  - Use Laravel's localization features for multi-language support.
+  - Implement proper CSRF protection and security measures.
+  - Use Laravel Mix for asset compilation.
+  - Implement proper database indexing for improved query performance.
+  - Use Laravel's built-in pagination features.
+  - Implement proper error logging and monitoring.
+
+  Key Conventions
+  1. Follow Laravel's MVC architecture.
+  2. Use Laravel's routing system for defining application endpoints.
+  3. Implement proper request validation using Form Requests.
+  4. Use Laravel's Blade templating engine for views.
+  5. Implement proper database relationships using Eloquent.
+  6. Use Laravel's built-in authentication scaffolding.
+  7. Implement proper API resource transformations.
+  8. Use Laravel's event and listener system for decoupled code.
+  9. Implement proper database transactions for data integrity.
+  10. Use Laravel's built-in scheduling features for recurring tasks.
   
-  // ❌ DON'T: Show anti-patterns
-  const badExample = false;
-  ```
-
-- **Rule Content Guidelines:**
-  - Start with high-level overview
-  - Include specific, actionable requirements
-  - Show examples of correct implementation
-  - Reference existing code when possible
-  - Keep rules DRY by referencing other rules
-
-- **Rule Maintenance:**
-  - Update rules when new patterns emerge
-  - Add examples from actual codebase
-  - Remove outdated patterns
-  - Cross-reference related rules
-
-- **Best Practices:**
-  - Use bullet points for clarity
-  - Keep descriptions concise
-  - Include both DO and DON'T examples
-  - Reference actual code over theoretical examples
-  - Use consistent formatting across rules 

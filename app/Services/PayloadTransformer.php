@@ -67,11 +67,11 @@ class PayloadTransformer
             }
 
             $transformed = $this->transformBaseGpsObject($gpsObject);
-            
+
             // Campos específicos para POLICIAL
             $transformed['idTransmision'] = $this->generateTransmissionId();
-            $transformed['codigoComisaria'] = $municipality->codigo_comisaria;
-            
+            $transformed['codigoComisaria'] = $this->extractCodigoComisaria($gpsObject, $municipality);
+
             $transformedData[] = $transformed;
         }
 
@@ -509,4 +509,41 @@ class PayloadTransformer
             'timestamp' => Carbon::now()->toISOString()
         ];
     }
-} 
+
+    /**
+     * Extraer código de comisaría del objeto GPS o usar el de la base de datos como fallback
+     *
+     * @param array $gpsObject
+     * @param Municipality $municipality
+     * @return string|null
+     */
+    private function extractCodigoComisaria(array $gpsObject, Municipality $municipality): ?string
+    {
+        // 1. Buscar en custom_fields
+        if (isset($gpsObject['custom_fields']) && is_array($gpsObject['custom_fields'])) {
+            foreach ($gpsObject['custom_fields'] as $field) {
+                if (isset($field['name']) && strtolower($field['name']) === 'codigocomisaria' && isset($field['value'])) {
+                    $codigo = trim((string) $field['value']);
+                    if (strlen($codigo) === 6 && is_numeric($codigo)) {
+                        return $codigo;
+                    }
+                }
+            }
+        }
+        // 2. Buscar campo directo
+        if (isset($gpsObject['codigoComisaria'])) {
+            $codigo = trim((string) $gpsObject['codigoComisaria']);
+            if (strlen($codigo) === 6 && is_numeric($codigo)) {
+                return $codigo;
+            }
+        }
+        if (isset($gpsObject['codigo_comisaria'])) {
+            $codigo = trim((string) $gpsObject['codigo_comisaria']);
+            if (strlen($codigo) === 6 && is_numeric($codigo)) {
+                return $codigo;
+            }
+        }
+        // 3. Fallback: usar el de la base de datos
+        return $municipality->codigo_comisaria;
+    }
+}
